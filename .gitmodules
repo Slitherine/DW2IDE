@@ -1,0 +1,8 @@
+[submodule "Bindings"]
+	path = Bindings
+	url = https://github.com/Slitherine/dw2ide-bindings.git
+
+[submodule "DistantWorlds.IDE"]
+	path = DistantWorlds.IDE
+	url = https://github.com/Slitherine/DistantWorlds.IDE.git
+

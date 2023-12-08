@@ -1,6 +1,6 @@
 # DW2IDE
 
-DW2IDE is a robust and versatile Integrated Development Environment (IDE) built with Electron.js. It leverages Microsoft's Monaco editor for source code editing, ensuring a feature-rich and user-friendly experience.
+DW2IDE is a robust and versatile Integrated Development Environment (IDE) built with Electron. It leverages Microsoft's Monaco editor for source code editing, ensuring a feature-rich and user-friendly experience.
 
 ## Screenshots
 

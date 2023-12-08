@@ -1,0 +1,62 @@
+/* injected by preload.js */
+
+.helper-resize-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2147483647;
+}
+
+.helper-resize-container > * {
+  pointer-events: auto;
+}
+
+.helper-resize-container > .helper-resize-horiz {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: max(0.2vw, 1px);
+}
+
+.helper-resize-container > .helper-resize-left {
+  left: 0;
+  cursor: w-resize;
+}
+
+.helper-resize-container > .helper-resize-right {
+  right: 0;
+  cursor: e-resize;
+}
+
+.helper-resize-container > .helper-resize-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: max(0.2vh, 1px);
+  cursor: s-resize;
+}
+
+.helper-resize-container > .helper-resize-corner {
+  position: absolute;
+  width: max(0.4vw, 2px);
+  height: max(0.4vh, 2px);
+}
+
+.helper-resize-container > .helper-resize-bottom-left {
+  left: 0;
+  bottom: 0;
+  cursor: sw-resize;
+}
+
+.helper-resize-container > .helper-resize-bottom-right {
+  right: 0;
+  bottom: 0;
+  cursor: se-resize;
+}
+
+

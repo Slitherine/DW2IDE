@@ -13,12 +13,28 @@ export {AppDw2IdeClrProtocolHandler} from './scheme-app-dw2ide-clr.js';
 const PreloadCssHeader = //language=text
     "<app://dw2ide/preload.css>; rel=preload; as=style";
 
+function ContentTypeAppendCharset(mimeType) {
+    switch (mimeType) {
+        case 'text/plain':
+        case 'text/css':
+        case 'text/html':
+        case 'text/xml':
+        case 'application/json':
+        case 'application/javascript':
+        case 'application/xml':
+        case 'application/xhtml+xml':
+            return mimeType + '; charset=utf-8';
+        default:
+            return mimeType;
+    }
+}
+
 function HandleHeadRequest(mimeType, stats) {
     const response = new Response(null, {
         status: 200,
         headers: {
             'Date': new Date().toUTCString(),
-            'Content-Type': mimeType,
+            'Content-Type': ContentTypeAppendCharset(mimeType),
             'Content-Length': stats.size,
             'Last-Modified': stats.mtime.toUTCString(),
             'Cache-Control': 'public, max-age=31536000, must-revalidate',
@@ -44,7 +60,7 @@ async function HandleGetRequest(mimeType, stats, request, resolvedPath) {
                 status: 304,
                 headers: {
                     'Date': new Date().toUTCString(),
-                    'Content-Type': mimeType,
+                    'Content-Type': ContentTypeAppendCharset(mimeType),
                     'Content-Length': stats.size,
                     'Last-Modified': stats.mtime.toUTCString(),
                     'Cache-Control': 'public, max-age=31536000, must-revalidate',
@@ -107,7 +123,7 @@ async function HandleGetRequest(mimeType, stats, request, resolvedPath) {
         status: successStatusCode,
         headers: {
             'Date': new Date().toUTCString(),
-            'Content-Type': mimeType,
+            'Content-Type': ContentTypeAppendCharset(mimeType),
             'Content-Length': stats.size,
             'Last-Modified': stats.mtime.toUTCString(),
             'Cache-Control': 'public, max-age=31536000, must-revalidate',
@@ -136,14 +152,14 @@ async function ErrorResponse(status, statusText) {
     if (errorPage !== null) {
         return new Response(errorPage, {
             status, statusText, headers: {
-                'Content-Type': 'text/html'
+                'Content-Type': ContentTypeAppendCharset('text/html')
             }
         });
     }
 
     return new Response(statusText, {
         status, statusText, headers: {
-            'Content-Type': 'text/plain'
+            'Content-Type': ContentTypeAppendCharset('text/plain')
         }
     });
 }
@@ -174,7 +190,7 @@ export async function AppDw2IdeProtocolHandler(request, url) {
 
     let resolvedPath = ResolvePath(url);
 
-    console.log("AppDw2IdeProtocolHandler: ", resolvedPath);
+    console.log("AppDw2IdeProtocolHandler: ", request.method, resolvedPath);
 
     const stats = await tryAwaitOrDefault(
         async () => await fs.stat(resolvedPath),

@@ -1,0 +1,207 @@
+@import './base.css';
+
+body > nav {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 0.25em 0.25em 0;
+}
+
+#btn-up, #btn-back, #btn-forward {
+  font-size: 1.25em;
+}
+
+#btn-extract-matches {
+  font-size: 2em;
+}
+
+input[type="text"], input[type="search"] {
+  width: 100%;
+  padding: 0.5em;
+  border-radius: 4px;
+}
+
+/*
+search bar should have a search icon
+but should not overlap with the clear button
+*/
+label {
+  position: relative;
+}
+
+#input-search:not(:placeholder-shown) {
+  padding-right: 2.5em;
+}
+
+#label-search::after {
+  content: '\1F50D';
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translateY(-50%);
+  filter: brightness(150%);
+}
+
+#label-path::after {
+  content: '\1F9ED';
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translateY(-50%);
+  filter: brightness(150%);
+}
+
+#form-path {
+  flex-grow: 1;
+}
+
+body > footer {
+  position: fixed;
+  bottom: 0;
+}
+
+details {
+  margin-bottom: 1em;
+}
+
+#div-loaded-bundle {
+  font-size: 0.8em;
+}
+
+#div-loaded-bundle > div::before {
+  content: '\1F4E6';
+  margin-right: 0.5em;
+
+}
+
+main {
+  padding: 1em;
+  border: 1px solid var(--vt-c-divider-light-2);
+  border-radius: 4px;
+}
+
+#content-tree ul {
+  list-style: none;
+  padding-left: 1em;
+  position: relative;
+}
+
+/* directory icon */
+#content-tree ul > li::before {
+  content: '\1F4C1';
+}
+
+#content-tree ul > li.expanded::before {
+  content: '\1F4C2';
+}
+#content-tree ul > li {
+  white-space: nowrap;
+}
+#content-tree ul > li > ul {
+  display: none;
+}
+
+#content-tree li.expanded > ul {
+  display: block;
+}
+
+#content-tree ul > li.expanded > ul > li:not(:last-child)::before {
+  content: '\251C\1F4C1';
+}
+
+#content-tree ul > li.expanded > ul > li:last-child::before {
+  content: '\2514\1F4C1';
+}
+
+#content-tree ul > li.expanded > ul > li.expanded:not(:last-child)::before {
+  content: '\251C\1F4C2';
+}
+
+#content-tree ul > li.expanded > ul > li.expanded:last-child::before {
+  content: '\2514\1F4C2';
+}
+
+#content-tree {
+  overflow: auto;
+  resize: horizontal;
+  min-width: 5vw;
+  max-width: 90vw;
+  height: calc(100vh - 5em);
+  width: 16em;
+}
+
+#content-list-view {
+  margin-left: 1em;
+  flex-grow: 1;
+  overflow-y: auto;
+  height: calc(100vh - 5em);
+}
+
+body > main {
+  display: flex;
+}
+.content-list-item {
+  white-space: nowrap;
+  position: relative;
+}
+.content-list-item::before {
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0.25em;
+  content: '\1F4C4';
+}
+.content-list-item[data-simple-type='Texture']::before {
+  content: '\1F5BC';
+}
+.content-list-item[data-simple-type='Material']::before {
+  content: '\1F3A8';
+}
+
+.content-list-item[data-simple-type]:hover::after {
+  content: 'Type:' attr(data-simple-type) '\a'
+  '(' attr(data-type) ')\a'
+  'Id: ' attr(data-id);
+  white-space: pre;
+  position: absolute;
+  left: 4em;
+  top: 100%;
+  display: inline-block;
+  font-size: 0.8em;
+  background: rgba(0,0,0,0.8);
+  z-index: 1;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.content-list-item[data-id]:not([data-simple-type]):hover::after {
+  content: 'Id: ' attr(data-id);
+  position: absolute;
+  left: 4em;
+  top: 100%;
+  display: inline-block;
+  font-size: 0.8em;
+  background-color: rgba(0,0,0,0.8);
+  z-index: 1;
+  padding: 4px;
+  border-radius: 4px;
+}
+.content-list-item[data-simple-type='Texture'] {
+  --preview-src: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E");
+  --preview-height: 4em;
+}
+.content-list-item[data-simple-type='Texture']:hover::after {
+  background-image: var(--preview-src);
+  background-size: auto calc(100% - (3*1.75em + 4px));
+  background-repeat: no-repeat;
+  background-position-y: calc(100% - 4px);
+  background-position-x: 4px;
+  right: 0;
+  min-height: calc(3*1.75em + var(--preview-height));
+  text-shadow:
+          0 0 4px black, 0 0 4px black, 0 0 8px black, 0 0 8px black,
+          0 0 12px black, 0 0 12px black, 0 0 12px black, 0 0 12px black;
+}
+.content-list-item > span {
+  pointer-events: none;
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DW2IDE - Bundle Browser</title>
+    <link rel="stylesheet" href="bundle-browser.css">
+    <script type="module" src="bundle-browser.js"></script>
+</head>
+<body>
+<nav id="browser-nav">
+    <button id="btn-up" title="Up">&#8679;</button>
+    <button id="btn-back" title="Back">&#8678;</button>
+    <button id="btn-forward" title="Forward">&#8680;</button>
+    <form id="form-path">
+        <label id="label-path" for="input-path">
+            <input id="input-path" type="text"/>
+        </label>
+    </form>
+    <form id="form-search">
+        <label id="label-search" for="input-search" title="Search">
+            <input id="input-search" type="search"/>
+        </label>
+    </form>
+    <button id="btn-extract-matches" title="Extract all matching contents">&#11187;</button>
+</nav>
+<main>
+    <section id="content-tree"></section>
+    <section id="content-list-view"></section>
+</main>
+<footer>
+    <button id="btn-load-bundle">Load ...</button>
+    <div id="div-loaded-bundle"></div>
+</footer>
+</body>
+</html>

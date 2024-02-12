@@ -1,15 +1,92 @@
-const {contextBridge, ipcRenderer: ipc} = require('electron');
+import {ipcRenderer as ipc, shell, clipboard, nativeImage} from 'electron';
+import runtime from 'dw2ide-runtime';
+import packageJson from '../package.json' assert {type: 'json'};
+import packageLockJson from '../package-lock.json' assert {type: 'json'};
+
+/** @external window
+ * @type {Window} */
+window;
+
+/** @external document
+ * @type {Document|HTMLDocument} */
+document;
+
+/*ipc.invoke('dev-tools', 'open')
+    .catch(e => console.error(e));*/
+
+window.dw2ide = runtime;
+window.electron = {
+    ipc,
+    shell,
+    clipboard,
+    nativeImage,
+    async capturePage(rect) {
+        try {
+            if (rect instanceof DOMRect)
+                rect = {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
+            return await ipc.invoke('capture-page', rect);
+        } catch (error) {
+            return null;
+        }
+    }
+};
+
+const dialogExposure = {
+    async showOpenDialog(args) {
+        try {
+            return await ipc.invoke('show-open-dialog', args);
+        } catch (error) {
+            return {canceled: true, filePaths: [], error};
+        }
+    },
+    async showSaveDialog(args) {
+        try {
+            return await ipc.invoke('show-save-dialog', args);
+        } catch (error) {
+            return {canceled: true, filePath: '', error};
+        }
+    },
+    async showMessageBox(args) {
+        try {
+            return await ipc.invoke('show-message-box', args);
+        } catch (error) {
+            return {response: 0, error};
+        }
+    },
+    async showErrorBox(title, content) {
+        try {
+            return await ipc.invoke('show-error-box', {title, content});
+        } catch (error) {
+            return {error};
+        }
+    }
+};
+
+window.dialog = dialogExposure;
 
 window.addEventListener('DOMContentLoaded', () => {
 
-    const keys = Object.keys(process.versions);
+    const versions = structuredClone(process.versions);
+    versions['ide'] = packageJson.version;
+    versions['dotnet'] = runtime.GetNetVersion().split('+', 1)[0];
+
+    for (const [key, value] of Object.entries(packageLockJson.packages))
+        if (key.startsWith('node_modules/')) {
+            const name = key.substring(13);
+            if (name.includes('/') || name.includes('@'))
+                continue;
+            versions[name] = value.version;
+        }
+
+    const keys = Object.keys(versions);
     const selector = `span.${keys.join('-version, span.')}-version`;
 
     const versionElements = document.querySelectorAll(selector);
 
     for (const versionElement of versionElements) {
-        const versionType = versionElement.className.split('-', 1)[0];
-        versionElement.innerText = process.versions[versionType];
+        const className = versionElement.className;
+        const versionType = className.slice(0, -8);
+        versionElement.innerText = versions[versionType];
     }
 
     // wire up the resize handlers via ipc messages
@@ -76,49 +153,55 @@ window.addEventListener('DOMContentLoaded', () => {
     resizeLeft.classList.add('helper-resize-horiz');
     resizeLeft.dataset.direction = 'left';
     container.appendChild(resizeLeft);
-    resizeLeft.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true});
-    resizeLeft.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true});
-    resizeLeft.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true});
-    resizeLeft.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true});
+    resizeLeft.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true, passive: false});
+    resizeLeft.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeLeft.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeLeft.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true, passive: false});
 
     const resizeRight = document.createElement('div');
     resizeRight.classList.add('helper-resize-right');
     resizeRight.classList.add('helper-resize-horiz');
     resizeRight.dataset.direction = 'right';
     container.appendChild(resizeRight);
-    resizeRight.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true});
-    resizeRight.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true});
-    resizeRight.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true});
-    resizeRight.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true});
+    resizeRight.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true, passive: false});
+    resizeRight.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeRight.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeRight.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true, passive: false});
 
     const resizeBottom = document.createElement('div');
     resizeBottom.classList.add('helper-resize-bottom');
     resizeBottom.dataset.direction = 'bottom';
     container.appendChild(resizeBottom);
-    resizeBottom.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true});
-    resizeBottom.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true});
-    resizeBottom.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true});
-    resizeBottom.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true});
+    resizeBottom.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true, passive: false});
+    resizeBottom.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeBottom.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeBottom.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true, passive: false});
 
     const resizeBottomLeft = document.createElement('div');
     resizeBottomLeft.classList.add('helper-resize-bottom-left');
     resizeBottomLeft.classList.add('helper-resize-corner');
     resizeBottomLeft.dataset.direction = 'bottom left';
     container.appendChild(resizeBottomLeft);
-    resizeBottomLeft.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true});
-    resizeBottomLeft.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true});
-    resizeBottomLeft.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true});
-    resizeBottomLeft.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true});
+    resizeBottomLeft.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true, passive: false});
+    resizeBottomLeft.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeBottomLeft.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeBottomLeft.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {
+        capture: true,
+        passive: false
+    });
 
     const resizeBottomRight = document.createElement('div');
     resizeBottomRight.classList.add('helper-resize-bottom-right');
     resizeBottomRight.classList.add('helper-resize-corner');
     resizeBottomRight.dataset.direction = 'bottom right';
     container.appendChild(resizeBottomRight);
-    resizeBottomRight.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {passive: true});
-    resizeBottomRight.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true});
-    resizeBottomRight.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true});
-    resizeBottomRight.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {capture: true});
+    resizeBottomRight.addEventListener('pointerdown', ResizeHelperPointerDownHandler, {capture: true, passive: false});
+    resizeBottomRight.addEventListener('pointerup', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeBottomRight.addEventListener('pointercancel', ResizeHelperPointerUpHandler, {capture: true, passive: false});
+    resizeBottomRight.addEventListener('lostpointercapture', ResizeHelperPointerUpHandler, {
+        capture: true,
+        passive: false
+    });
 
 
     const preloadCss = document.createElement('link');
@@ -148,16 +231,19 @@ window.addEventListener('DOMContentLoaded', () => {
             .catch(e => console.error(e));
     }
 
-    window.addEventListener('pointerup', WindowPointerUpHandler, {capture: true});
-    window.addEventListener('pointercancel', WindowPointerUpHandler, {capture: true});
-    window.addEventListener('lostpointercapture', WindowPointerUpHandler, {capture: true});
+    window.addEventListener('pointerup', WindowPointerUpHandler, {capture: true, passive: false});
+    window.addEventListener('pointercancel', WindowPointerUpHandler, {capture: true, passive: false});
+    window.addEventListener('lostpointercapture', WindowPointerUpHandler, {capture: true, passive: false});
 
     /**
-     * @param e {KeyboardEvent}
+     * @param e {KeyboardEvent|Event}
      */
     function WindowKeyDownHandler(e) {
         if (e.key === 'F12') {
             ipc.invoke('dev-tools', 'open')
+                .catch(e => console.error(e));
+        } else if (e.key == 'F5') {
+            ipc.invoke('reload')
                 .catch(e => console.error(e));
         } else if (e.key === 'Escape') {
             if (!resizingActive)
@@ -173,8 +259,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    window.addEventListener('keydown', WindowKeyDownHandler, {capture: true});
+    window.addEventListener('keydown', WindowKeyDownHandler, {capture: true, passive: false});
 
+    /**
+     * @param e {KeyboardEvent|Event}
+     */
     function WindowKeyUpHandler(e) {
         //console.log(e.key);
         // Win+Up = Maximize
@@ -196,7 +285,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // TODO: snapping, vertical maximize, vertical restore
     }
 
-    window.addEventListener('keyup', WindowKeyUpHandler, {capture: true});
+    window.addEventListener('keyup', WindowKeyUpHandler, {capture: true, passive: false});
 
     ipc.on('resize-window', (event, arg) => {
         // handle abort
@@ -207,9 +296,6 @@ window.addEventListener('DOMContentLoaded', () => {
             document.releasePointerCapture(pointerId);
         }
     });
+
 });
 
-/*
-ipc.invoke('dev-tools', 'open')
-    .catch(e => console.error(e));
-*/

@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "dw2ide-runtime": "file:Bindings",
-    "mime-types": "^2.1.35"
+    "mime-types": "^2.1.35",
+    "monaco-editor": "^0.45.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.1",
@@ -42,10 +43,6 @@
   },
   "scripts": {
     "start": "electron .",
-    "dev": "electronmon .",
-    "postinstall": "electron-builder install-app-deps",
-    "build:win": "npm run build && electron-builder --win --config",
-    "build:mac": "npm run build && electron-builder --mac --config",
-    "build:linux": "npm run build && electron-builder --linux --config"
+    "dev": "electronmon ."
   }
 }

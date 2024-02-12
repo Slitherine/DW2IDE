@@ -1,8 +1,8 @@
-import {BrowserWindow, ipcMain as ipc} from "electron/main";
+import {BrowserWindow, dialog, ipcMain as ipc} from "electron/main";
 import path from "node:path";
-import {h} from "vue";
 import {ResolvePath} from './scheme-app-dw2ide.js';
 import * as electron from 'electron';
+import ResourcesPath from './resources-path.js';
 
 function BrowserWindowUpdateHack(browser) {
     browser.setBackgroundColor('#00000000');
@@ -28,6 +28,7 @@ export async function CreateWindowAsync(url, width, height, preload) {
         width: width,
         height: height,
         title: "DW2IDE: " + url,
+        icon: path.join(ResourcesPath, 'icons', 'icon.ico'),
         transparent: true,
         autoHideMenuBar: true,
         menuBarVisible: false,
@@ -38,16 +39,28 @@ export async function CreateWindowAsync(url, width, height, preload) {
         maximizable: false,
         minimizable: false,
         backgroundColor: '#00000000',
-        backgroundMaterial: 'mica'
+        backgroundMaterial: 'mica',
+        webPreferences: {
+            sandbox: false,
+            nodeIntegration: true,
+            contextIsolation: false,
+            nodeIntegrationInWorker: true,
+            nodeIntegrationInSubFrames: true,
+            backgroundThrottling: false,
+            defaultEncoding: 'UTF-8',
+            /*experimentalFeatures: true,*/
+            plugins: true
+        }
     };
 
     if (preload) {
         if (preload.startsWith('app://'))
             preload = ResolvePath(new URL(preload));
-        options.webPreferences = {preload};
+        options.webPreferences.preload = preload;
     }
 
     const browser = new BrowserWindow(options);
+    browser.webContents.openDevTools();
 
     TransparentWindows.add(browser);
 
@@ -73,6 +86,12 @@ export async function CreateWindowAsync(url, width, height, preload) {
     browser.setResizable(true);
     browser.focus();
     browser.removeMenu();
+
+    browser.webContents.setWindowOpenHandler(({url}) => {
+        console.log(`WindowOpenHandler: ${url}`);
+        CreateWindowAsync(url, 800, 600, preload);
+        return {action: 'deny'};
+    });
 
     return browser;
 }
@@ -113,6 +132,58 @@ export function RegisterWindowingIpcHandlers() {
             event.sender.closeDevTools();
         }
     });
+
+    ipc.handle( 'capture-page', async (event, arg) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        try {
+            return await window.capturePage(arg);
+        } catch (error) {
+            return {error};
+        }
+    });
+
+    ipc.handle('reload', (event, arg) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        window.reload();
+    });
+
+    ipc.handle('show-open-dialog', async (event, arg) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        try {
+            return await dialog.showOpenDialog(window, arg);
+        } catch (error) {
+            return {canceled: true, filePaths: [], error};
+        }
+    });
+
+    ipc.handle('show-save-dialog', async (event, arg) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        try {
+            return await dialog.showSaveDialog(window, arg);
+        } catch (error) {
+            return {canceled: true, filePath: '', error};
+        }
+    });
+
+    ipc.handle('show-message-box', async (event, arg) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        try {
+            return await dialog.showMessageBox(window, arg);
+        } catch (error) {
+            return {response: 0, checkboxChecked: false, error};
+        }
+    });
+
+    ipc.handle('show-error-box', (event, arg) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        try {
+            dialog.showErrorBox(arg['title'], arg['content']);
+            return {}; // no error
+        } catch (error) {
+            return {error};
+        }
+    });
+
     ipc.handle('window-command', (event, arg) => {
         const window = BrowserWindow.fromWebContents(event.sender);
         if (!window
@@ -133,7 +204,7 @@ export function RegisterWindowingIpcHandlers() {
         } else if (arg === 'reduce') {
             if (window.isMaximized()) {
                 window.unmaximize();
-                window.hookWindowMessage()
+                window.hookWindowMessage();
             } else {
                 if (!window.isMinimized()) {
                     window.minimize();

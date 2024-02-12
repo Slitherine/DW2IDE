@@ -95,3 +95,71 @@ a:hover {
   color: hsl(from var(--link-color) h calc(s * 1.5) calc(l * 1.1));
 }
 
+
+/* color theme some controls */
+button, input, select, textarea {
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border-color: var(--color-border);
+  border-radius: 2px;
+  border-width: 1px;
+  border-style: solid;
+  outline: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+nav button, nav input, nav select {
+  height: 2.5rem;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 0;
+}
+button:hover {
+  border-color: var(--color-border-hover);
+}
+button:active {
+  border-color: var(--color-border);
+}
+input:focus, textarea:focus, button:focus {
+  outline: none;
+  border-color: var(--color-border-hover);
+}
+* {
+  scrollbar-width: thin;
+}
+
+#context-menu {
+  --x: 0;
+  --y: 0;
+  --o: 0; /* opacity */
+  transition: opacity 400ms;
+  opacity: var(--o);
+  z-index: 1073741824;
+  position: fixed;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: 0.25rem 0;
+  left: var(--x);
+  top: var(--y);
+  min-height: 1rem;
+  min-width: 1rem;
+  filter: drop-shadow(0.25vw 0.25vh calc((0.25vw + 0.25vh) / 2) rgba(0,0,0,0.5));
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 0.2rem;
+}
+#context-menu > * {
+    padding: 0 1rem 0.2rem 2rem;
+    margin: 0 0.25rem;
+}
+#context-menu > *:hover {
+  background-color: var(--color-background-soft);
+}
+#context-menu > hr {
+  height: 0;
+  border: none;
+  border-top: 1px solid color-mix(in srgb, currentColor, transparent 75%);
+  pointer-events: none;
+  margin: 0.1em 0.5em 0;
+}

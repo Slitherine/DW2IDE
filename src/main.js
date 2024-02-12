@@ -75,7 +75,9 @@ addCommandLineArguments(
         "V8VmFuture", // javascript features
         "GpuRasterization", "UiGpuRasterization", // gpu stuff
         "EnableZeroCopyTabCapture",
-        "DXGIWaitableSwapChain:DXGIWaitableSwapChainMaxQueuedFrames/3"],
+        "DXGIWaitableSwapChain:DXGIWaitableSwapChainMaxQueuedFrames/3",
+        "FluentScrollbar", "OverlayScrollbar", "SharedZstd",
+        "JavaScriptExperimentalSharedMemory"],
     ["enable-blink-features",
         "DirectSockets",
         "AbortSignalAny", "Accelerated2dCanvas", "AcceleratedSmallCanvases", "AnimationWorklet", "CLSScrollAnchoring",
@@ -125,12 +127,24 @@ await InstallProtocolHandler('app', new Map([
         allowServiceWorkers: true,
         supportFetchAPI: true
     });
+/*
+await InstallProtocolHandler('node', new Map([
+        ['*', NodeProtocolHandler],
+    ]),
+    {
+        standard: false,
+        secure: true,
+        corsEnabled: true,
+        allowServiceWorkers: true,
+        supportFetchAPI: true
+    });*/
+
 
 const ContentSecurityPolicy
     = `default-src 'none';` // on the outset, nothing is allowed
-    + `script-src-elem 'self';`
+    + `script-src-elem * node:;` // TODO: strict-dynamic, nonce and filling in nonce values on script refs
     + `style-src-elem 'self' 'unsafe-inline';`
-    + `img-src 'self' data:;`
+    + `img-src 'self' blob: data:;`
     + `font-src 'self';`
     + `manifest-src 'self';`
 ;
@@ -161,17 +175,19 @@ app.prependOnceListener('ready', async () => {
         }
     }
 
-    await CreateWindowAsync('app://dw2ide/index.html', 800, 600, 'app://dw2ide/preload.js');
+    await CreateWindowAsync('app://dw2ide/index.html', 800, 600, 'app://dw2ide/preload.mjs');
 
+    // handle activation
     app.on('activate', async () => {
         console.log("Activate event triggered.");
         // re-create a window if none exists?
         if (BrowserWindow.getAllWindows().length !== 0)
             return;
 
-        await CreateWindowAsync('app://dw2ide/index.html', 800, 600, 'app://dw2ide/preload.js');
+        await CreateWindowAsync('app://dw2ide/index.html', 800, 600, 'app://dw2ide/preload.mjs');
     });
 
+    // handle second instance, ensure single-instance and focus on window
     app.on('second-instance', (event, commandLine, workingDirectory) => {
         console.log("Second-instance event triggered.");
         const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
@@ -180,6 +196,7 @@ app.prependOnceListener('ready', async () => {
         window.focus();
     });
 
+    // handle window-all-closed
     app.on('window-all-closed', () => {
         console.log("Window-all-closed event triggered.");
         // because mac has a menu bar still active?

@@ -104,7 +104,7 @@ function ContextMenuClipImageSnapshot(event) {
     window.electron.capturePage(rect)
         .then((image) => {
             window.electron.clipboard.writeImage(image);
-            console.log('Copied to clipboard');
+            window.log('Copied to clipboard');
         });
 
     divContextMenu.remove();
@@ -114,7 +114,7 @@ function ContextMenuCopySelection() {
     const selection = window.getSelection();
 
     window.electron.clipboard.writeText(selection.toString());
-    console.log('Copied to clipboard');
+    window.log('Copied to clipboard');
 
     divContextMenu.remove();
 }
@@ -130,7 +130,7 @@ function ContextMenuPasteSelection(event) {
         target.selectionStart = selectionStart + clipboardContent.length;
         target.selectionEnd = target.selectionStart;
     }
-    console.log('Pasted from clipboard', clipboardContent);
+    window.log('Pasted from clipboard', clipboardContent);
     divContextMenu.remove();
 }
 

@@ -42,7 +42,7 @@ const PathHistory = [];
 const PathFuture = [];
 
 async function LoadBundle() {
-    console.log('Load Bundle button clicked');
+    //window.log('Load Bundle button clicked');
     const {filePaths} = await dialog.showOpenDialog({
         properties: ['openFile'],
         title: 'Load Stride Bundle',
@@ -56,21 +56,21 @@ async function LoadBundle() {
     if (filePaths !== undefined && filePaths.length > 0) {
         for (let i = 0; i < filePaths.length; i++) {
             const filePath = filePaths[i];
-            //console.log(`Load Bundle: ${filePath}`);
+            //window.log(`Load Bundle: ${filePath}`);
             if (BundleHandles.has(filePath)) {
-                console.log(`Already loaded bundle: ${filePath}`);
+                window.log(`Already loaded bundle: ${filePath}`);
                 continue;
             }
             if (filePath.endsWith('.bundle')) {
                 const bundle = dw2ide.LoadBundle(filePath);
                 if (bundle === undefined) {
-                    console.error(`Failed to load bundle: ${filePath}`);
+                    window.error(`Failed to load bundle: ${filePath}`);
                     continue;
                 }
                 BundleHandles.set(filePath, bundle);
                 //const bundleName = dw2ide.HandleToString(bundle);
-                //console.log(`Loaded Bundle: ${bundleName}`);
-                console.log(`Loaded bundle: ${filePath}`);
+                //window.log(`Loaded Bundle: ${bundleName}`);
+                window.log(`Loaded bundle: ${filePath}`);
                 BundlePath = filePath;
                 const divBundle = document.createElement('div');
                 divBundle.classList.add('bundle-path');
@@ -80,7 +80,7 @@ async function LoadBundle() {
             }
         }
     } else {
-        console.log('Load Bundle: No file(s) selected');
+        window.log('Load Bundle: No file(s) selected');
     }
 }
 
@@ -95,7 +95,7 @@ function OnBundleLoaded() {
 
     const queryEnum = dw2ide.QueryBundleObjects(handle, '**');
     if (queryEnum === undefined) {
-        console.error("Failed to query bundle objects.");
+        window.error("Failed to query bundle objects.");
         return;
     }
 
@@ -106,7 +106,7 @@ function OnBundleLoaded() {
         const entry = dw2ide.ReadQueriedBundleObject(queryEnum);
         if (entry === undefined) break;
 
-        console.log(`Entry: ${entry}`);
+        //window.log(`Entry: ${entry}`);
         const parts = entry.split('/');
         // if the last part is 'path' skip
         if (parts[parts.length - 1] === 'path') continue;
@@ -120,7 +120,7 @@ function OnBundleLoaded() {
             node = node[part];
         }
     }
-    console.log("Finished reading bundle contents.");
+    window.log("Finished reading bundle contents.");
 
     // populate tree view
     contentTree.innerHTML = '';
@@ -151,11 +151,11 @@ function OnBundleLoaded() {
         }
     }
 
-    console.log("Populating tree view...");
+    window.log("Populating tree view...");
     populateTree(tree, root);
-    console.log("Finished populating tree view.");
+    window.log("Finished populating tree view.");
     contentTree.appendChild(root);
-    console.log("Presented tree view.");
+    window.log("Presented tree view.");
     PopulateContentListView();
 }
 
@@ -187,25 +187,25 @@ function PopulateContentListView() {
     }
     if (glob.startsWith('/')) glob = glob.slice(1);
 
-    console.log(`Glob: ${glob}`);
+    //window.log(`Glob: ${glob}`);
     contentListView.innerHTML = '';
     const handle = BundleHandles.get(BundlePath);
 
-    console.log("Populating content list view...");
+    //window.log("Populating content list view...");
     const queryEnum = dw2ide.QueryBundleObjects(handle, glob);
     if (queryEnum === undefined) {
-        console.error("Failed to query bundle objects.");
+        window.error("Failed to query bundle objects.");
         return;
     }
 
     for (; ;) {
-        console.log("Reading queried bundle object...");
+        //window.log("Reading queried bundle object...");
         const entry = dw2ide.ReadQueriedBundleObject(queryEnum);
         if (entry === undefined) break;
-        console.log(`Entry: ${entry}`);
+        //window.log(`Entry: ${entry}`);
         // add entry to list view
         if (!entry.startsWith(path)) {
-            console.warn(`Entry '${entry}' does not match path '${path}'?!`);
+            window.warn(`Entry '${entry}' does not match path '${path}'?!`);
             continue;
         }
         let text = entry.slice(path.length);
@@ -233,7 +233,7 @@ function QueuePopulateItemMetadata(event) {
         if (div === null) return;
     }
     if (div.objectId !== undefined) return;
-    console.log(`Queueing populate item metadata for '${div.dataset.path}'...`);
+    //window.log(`Queueing populate item metadata for '${div.dataset.path}'...`);
     itemMetadataPopulationQueue.add(div);
     if (!populateItemMetadataPending) {
         populateItemMetadataPending = true;
@@ -246,7 +246,7 @@ function PopulateItemMetadata(div) {
     const path = itemData.path;
     const objId = new Uint8Array(16);
     div.objectId = objId;
-    const success = dw2ide.TryGetObjectId(path, objId) || false;
+    const success = dw2ide.TryGetObjectId(path, objId);
     if (success) {
         let str = '0x';
         for (const byte of objId) {
@@ -263,7 +263,7 @@ function PopulateItemMetadata(div) {
 }
 
 function NavigateUp() {
-    console.log('Up button clicked');
+    //window.log('Up button clicked');
     // chop last path component
     let path = inputPath.value;
     const lastSlash = path.lastIndexOf('/');
@@ -282,7 +282,7 @@ function NavigateUp() {
 }
 
 function NavigateBack() {
-    console.log('Back button clicked');
+    //window.log('Back button clicked');
     const path = inputPath.value;
     const prevPath = PathHistory.pop();
     if (prevPath !== undefined) {
@@ -293,7 +293,7 @@ function NavigateBack() {
 }
 
 function NavigateForward() {
-    console.log('Forward button clicked');
+    //window.log('Forward button clicked');
     const path = inputPath.value;
     const nextPath = PathFuture.pop();
     if (nextPath !== undefined) {
@@ -305,7 +305,7 @@ function NavigateForward() {
 
 function NavigateToPath(event) {
     event.preventDefault();
-    console.log(`Path: ${inputPath.value}`);
+    //window.log(`Path: ${inputPath.value}`);
     PathHistory.push(inputPath.value);
     clearPathFuture();
     PopulateContentListView();
@@ -314,7 +314,7 @@ function NavigateToPath(event) {
 
 function Search(event) {
     event.preventDefault();
-    console.log(`Search: ${inputSearch.value}`);
+    //window.log(`Search: ${inputSearch.value}`);
     PopulateContentListView();
     return false;
 }
@@ -354,31 +354,31 @@ function ShowContentItemHoverPreview(event) {
     if (div.tagName !== 'DIV') return;
     const itemData = div.dataset;
     const path = itemData.path;
-    console.log(`Updating preview for '${path}'...`);
+    //window.log(`Updating preview for '${path}'...`);
     const objId = div.objectId;
     const simpleType = itemData.simpleType;
     if (simpleType === 'Texture') {
-        console.log(`Get preview image for '${path}'...`);
+        //window.log(`Get preview image for '${path}'...`);
         let previewImage;
         if ('previewImage' in div) {
             previewImage = div.previewImage;
-            console.log(`Preview image already loaded for '${path}'.`);
+            //window.log(`Preview image already loaded for '${path}'.`);
         } else {
-            console.log(`Calling dw2ide.InstantiateBundleItem('${path}')...`);
+            //window.log(`Calling dw2ide.InstantiateBundleItem('${path}')...`);
             const itemHandle = dw2ide.InstantiateBundleItem(path);
             if (itemHandle === undefined) {
-                console.error(`Failed to instantiate '${path}'`);
+                window.error(`Failed to instantiate '${path}'`);
                 return;
             }
-            console.log(`Calling dw2ide.IsImage('${path}')...`);
+            window.log(`Calling dw2ide.IsImage('${path}')...`);
             if (!dw2ide.IsImage(itemHandle)) {
-                console.error(`'${path}' is not an image.`);
+                window.error(`'${path}' is not an image.`);
                 return;
             }
             previewImage = new Image();
             const dims = dw2ide.GetImageDimensions(itemHandle);
             if (dims !== 2) {
-                console.error(`'${path}' is not a 2D image, preview not supported.`);
+                window.error(`'${path}' is not a 2D image, preview not supported.`);
                 return;
             }
             const mipLevels = dw2ide.GetImageMipLevels(itemHandle);
@@ -393,12 +393,12 @@ function ShowContentItemHoverPreview(event) {
                 // check width and height separately as the calls aren't instant
                 const width = dw2ide.GetImageWidth(itemHandle, mipLevel);
                 if (width === undefined) {
-                    console.error(`Failed to get width of '${path}' mip level ${mipLevel}.`);
+                    window.error(`Failed to get width of '${path}' mip level ${mipLevel}.`);
                     continue;
                 }
                 const height = dw2ide.GetImageHeight(itemHandle, mipLevel);
                 if (height === undefined) {
-                    console.error(`Failed to get height of '${path}' mip level ${mipLevel}.`);
+                    window.error(`Failed to get height of '${path}' mip level ${mipLevel}.`);
                     continue;
                 }
                 const length = Math.max(width, height);
@@ -413,14 +413,14 @@ function ShowContentItemHoverPreview(event) {
                 }
             }
             const imgBuffers = [];
-            console.log(`Calling dw2ide.TryConvertImageToStreamWebp('${path}')...`);
-            if (!dw2ide.TryConvertImageToStreamWebp(itemHandle, targetMip, function (buffer, bufLen) {
+            window.log(`Calling dw2ide.TryConvertImageToStreamWebp('${path}')...`);
+            if (!dw2ide.TryConvertImageToStreamWebp(itemHandle, targetMip, function (buffer) {
                 imgBuffers.push(buffer);
             })) {
-                console.error(`Failed to convert '${path}' to webp.`);
+                window.error(`Failed to convert '${path}' to webp.`);
                 return;
             }
-            console.log(`Creating blob from ${imgBuffers.length} buffers...`);
+            window.log(`Creating blob from ${imgBuffers.length} buffers...`);
             const imgBlob = new Blob(imgBuffers, {type: 'image/webp'});
             const imgSrc = URL.createObjectURL(imgBlob);
             itemData.preview = imgSrc;
@@ -432,7 +432,7 @@ function ShowContentItemHoverPreview(event) {
 
             dw2ide.ReleaseHandle(itemHandle);
         }
-        console.log("Completed preview image loading.");
+        //window.log("Completed preview image loading.");
     }
 }
 
@@ -445,7 +445,7 @@ function ShowContentItemContextMenu(event) {
     if (div.tagName !== 'DIV') return;
     const itemData = div.dataset;
     const path = itemData.path;
-    console.log(`Show context menu for '${path}'...`);
+    window.log(`Show context menu for '${path}'...`);
     const divCopyPath = document.createElement('div');
     divCopyPath.textContent = 'Copy Path';
     divCopyPath.addEventListener('click', ContextMenuCopyPath, {passive: true});
@@ -484,21 +484,21 @@ function ShowContentItemContextMenu(event) {
 function ContextMenuCopyPath(event) {
     const path = divContextMenu.contextItem.dataset.path;
     window.electron.clipboard.writeText(path);
-    console.log(`Copied path '${path}' to clipboard.`);
+    window.log(`Copied path '${path}' to clipboard.`);
     divContextMenu.remove();
 }
 
 function ContextMenuCopyId(event) {
     const id = divContextMenu.contextItem.dataset.id;
     window.electron.clipboard.writeText(id);
-    console.log(`Copied id '${id}' to clipboard.`);
+    window.log(`Copied id '${id}' to clipboard.`);
     divContextMenu.remove();
 }
 
 function ContextMenuCopyType(event) {
     const type = divContextMenu.contextItem.dataset.type;
     window.electron.clipboard.writeText(type);
-    console.log(`Copied type '${type}' to clipboard.`);
+    window.log(`Copied type '${type}' to clipboard.`);
     divContextMenu.remove();
 
 }
@@ -514,25 +514,25 @@ function ContentItemExport(event) {
         defaultPath: dw2ide.GetUserChosenGameDirectory() + '\\' + name,
     }).then(result => {
         if (result.canceled) {
-            console.log('Export Bundle Item: No file selected');
+            window.log('Export Bundle Item: No file selected');
             return;
         }
         const filePath = result.filePath;
         if (!filePath) {
-            console.error("No file path provided.");
+            window.error("No file path provided.");
             return;
         }
-        console.log(`Export Bundle Item: ${filePath}`);
+        window.log(`Export Bundle Item: ${filePath}`);
         const div = divContextMenu.contextItem;
         const objectId = div.objectId;
         const success = dw2ide.TryExportObject(objectId, filePath);
         if (success) {
-            console.log(`Exported '${filePath}'`);
+            window.log(`Exported '${filePath}'`);
         } else {
-            console.error(`Failed to export '${filePath}'`);
+            window.error(`Failed to export '${filePath}'`);
         }
     }).catch(err => {
-        console.error(err);
+        window.error(err);
     });
 }
 
@@ -566,7 +566,7 @@ function ContentItemConvert(event, convertTo) {
     }
     if (!exportMethod) {
         debugger;
-        console.error(`No export method for '${convertTo}'`);
+        window.error(`No export method for '${convertTo}'`);
         return;
     }
 
@@ -579,43 +579,43 @@ function ContentItemConvert(event, convertTo) {
         filters: filters,
     }).then(result => {
         if (result.canceled) {
-            console.log('Export Bundle Item: No file selected');
+            window.log('Export Bundle Item: No file selected');
             return;
         }
         const filePath = result.filePath;
         if (!filePath) {
-            console.error("No file path provided.");
+            window.error("No file path provided.");
             return;
         }
 
-        console.log(`Export Bundle Item: ${filePath}`);
+        window.log(`Export Bundle Item: ${filePath}`);
         const div = divContextMenu.contextItem;
         const path = div.dataset.path;
         if (!path) {
-            console.error("No path associated with context menu item.");
+            window.error("No path associated with context menu item.");
             return;
         }
-        console.log(`Calling dw2ide.InstantiateBundleItem('${path}')...`);
+        window.log(`Calling dw2ide.InstantiateBundleItem('${path}')...`);
         const itemHandle = dw2ide.InstantiateBundleItem(path);
         if (itemHandle === undefined) {
-            console.error(`Failed to instantiate '${path}'`);
+            window.error(`Failed to instantiate '${path}'`);
             return;
         }
 
         const success = exportMethod(itemHandle, filePath);
         if (success) {
-            console.log(`Exported '${filePath}'`);
+            window.log(`Exported '${filePath}'`);
         } else {
-            console.error(`Failed to export '${filePath}'`);
+            window.error(`Failed to export '${filePath}'`);
         }
 
         dw2ide.ReleaseHandle(itemHandle);
     }).catch(err => {
-        console.error(err);
+        window.error(err);
     });
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    console.log('beforeinstallprompt event fired');
+    window.log('beforeinstallprompt event fired');
     e.prompt();
 });

@@ -1,2 +1,179 @@
 @import './base.css';
 
+/* 'main menu' comprised of icon buttons */
+body > nav.action-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+  max-height: calc(2.5rem + 6px);
+  height: 3px;
+  gap: 3px;
+  padding: 0 3px 3px 3px;
+  border-bottom: 1px solid var(--color-border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1073741823;
+  backdrop-filter: blur(3px);
+  transition: height 400ms;
+  transition-delay: 100ms;
+}
+
+body > nav.action-bar.first-time {
+  animation: border-pulse 400ms infinite;
+}
+body > nav.action-bar.first-time:not(:hover)::after {
+  pointer-events: none;
+  position: absolute;
+  content: '\1F446';
+  filter: brightness(1.5);
+  text-shadow: 0 0 1vmin black;
+  top: 0;
+  left: 1vh;
+  animation: wiggle-up 1s infinite;
+}
+
+@keyframes border-pulse {
+  0% {
+    border-color: var(--color-border);
+  }
+  50% {
+    border-color: var(--vt-c-indigo);
+  }
+  100% {
+    border-color: var(--color-border);
+  }
+}
+
+@keyframes wiggle-up {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.5vh);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+body > nav.action-bar:focus-within,
+body > nav.action-bar:hover {
+  height: calc(2.5rem + 6px);
+  transition-delay: 0s;
+  animation: none;
+}
+
+body > nav.action-bar svg {
+  fill: currentColor;
+  width: 1em;
+  height: 1em;
+  transform: scale(2);
+}
+
+/* invisible flex spacer */
+body > nav.action-bar > .action-separator {
+  flex: 1;
+  pointer-events: none;
+}
+
+/* small font label tucked above an adjacent control */
+body > nav.action-bar > label {
+  position: relative;
+}
+
+body > nav.action-bar > label > .action-label {
+  font-size: 0.5em;
+  line-height: 0;
+  vertical-align: text-top;
+  overflow: visible;
+  display: inline-block;
+  backdrop-filter: none;
+  position: absolute;
+  margin-top: 1em;
+}
+
+body > nav.action-bar > label > .action-label.right {
+  transform: translateX(-100%);
+}
+
+
+/* IDE container */
+body > main {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 1.2rem);
+}
+
+/* sidebars */
+body > main > aside {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 32px;
+  min-width: 32px;
+  max-width: 50vw;
+  resize: horizontal;
+  height: 100%;
+}
+
+body > main > aside.sidebar-left {
+  border-right: 1px solid var(--color-border);
+}
+
+/*
+body > main > aside.sidebar-right {
+  border-left: 1px solid var(--color-border);
+}
+*/
+
+/* editor container */
+body > main > .editor-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+
+/* doc tabs */
+body > main > .editor-container > nav {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: 1.8rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/*
+body > main > .editor-container > footer.feedback {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: 2.5rem;
+  min-height: 1rem;
+  max-height: 50vh;
+  resize: vertical;
+  border-top: 1px solid var(--color-border);
+}
+*/
+
+
+/* editor container, monaco editor */
+#monaco-editor-container {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+}
+
+/* status bar */
+body > footer.status-bar {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: 1.2em;
+  border-top: 1px solid var(--color-border);
+}
+
+

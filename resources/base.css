@@ -1,3 +1,5 @@
+@import url('/icons/codicon.css');
+
 /* color palette from <https://github.com/vuejs/theme> */
 :root {
   --vt-c-white: #ffffff;
@@ -97,9 +99,10 @@ a:hover {
 
 
 /* color theme some controls */
-button, input, select, textarea {
+button, input, select, textarea, .action-button {
   color: var(--color-text);
-  background-color: var(--color-background);
+  background-color: color-mix(var(--color-background), transparent, 0.8);
+  backdrop-filter: blur(3px);
   border-color: var(--color-border);
   border-radius: 2px;
   border-width: 1px;
@@ -108,19 +111,37 @@ button, input, select, textarea {
   padding: 0.5rem 1rem;
   cursor: pointer;
 }
-nav button, nav input, nav select {
+
+button[disabled], input[disabled], select[disabled], textarea[disabled], .action-button[disabled] {
+  filter: grayscale(1) saturate(0.5) contrast(0.5);
+  cursor: not-allowed;
+}
+
+nav button, nav input, nav select, nav .action-button {
   height: 2.5rem;
   display: inline-block;
   vertical-align: middle;
   line-height: 0;
 }
-button:hover {
+
+nav button.touch-left, nav .action-button.touch-left {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+nav button.touch-right, nav .action-button.touch-right {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+button:not([disabled]):hover {
   border-color: var(--color-border-hover);
 }
 button:active {
   border-color: var(--color-border);
 }
-input:focus, textarea:focus, button:focus {
+input:not([disabled]):focus,
+textarea:not([disabled]):focus,
+button:not([disabled]):focus {
   outline: none;
   border-color: var(--color-border-hover);
 }
@@ -162,4 +183,22 @@ input:focus, textarea:focus, button:focus {
   border-top: 1px solid color-mix(in srgb, currentColor, transparent 75%);
   pointer-events: none;
   margin: 0.1em 0.5em 0;
+}
+
+.text-left {
+  text-align: left;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+
+[hidden] {
+  display: none !important;
+  position: absolute;
+  pointer-events: none;
+  width: 0;
+  height: 0;
 }

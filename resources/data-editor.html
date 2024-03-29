@@ -3,16 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <title>DW2IDE - Data Editor</title>
-    <link rel="stylesheet" href="data-editor.css">
+    <link rel="stylesheet" href="data-editor.css" data-override />
     <script type="module" src="data-editor.js"></script>
 </head>
 <body>
+<nav class="action-bar">
+    <button class="action-button" id="action-new" title="New&hellip;">
+        <span class="codicon codicon-new-file"></span>
+    </button>
+    <button class="action-button" id="action-open" title="Open&hellip;">
+        <span class="codicon codicon-folder-opened"></span>
+    </button>
+    <button class="action-button" id="action-save" title="Save">
+        <span class="codicon codicon-save"></span>
+    </button>
+    <button class="action-button" id="action-save-as" title="Save As&hellip;">
+        <span class="codicon codicon-save-as"></span>
+    </button>
+    <div class="action-separator"></div>
+    <label class="action-button touch-right">
+        <span class="action-label">Zoom</span>
+        <input type="range" id="action-zoom-slider" min="-5" max="20" step="1" value="0">
+        <span class="action-label right" id="action-zoom-value">100%</span>
+    </label>
+    <button class="action-button touch-left" id="action-zoom-reset" title="Reset Zoom" disabled>
+        <span class="codicon codicon-discard"></span>
+    </button>
+    <div class="action-separator"></div>
+    <button class="action-button" id="action-minimize" title="Minimize">
+        <span class="codicon codicon-chrome-minimize"></span>
+    </button>
+    <button class="action-button" id="action-restore" title="Restore" hidden>
+        <span class="codicon codicon-chrome-restore"></span>
+    </button>
+    <button class="action-button" id="action-maximize" title="Maximize" hidden>
+        <span class="codicon codicon-chrome-maximize"></span>
+    </button>
+</nav>
 <main>
-    <section class="sidebar-left"></section>
-    <nav class="tabs-documents"></nav>
-    <div class="monaco-editor"></div>
-    <footer class="feedback"></footer>
-    <section class="sidebar-right"></section>
+    <aside class="sidebar-left"></aside>
+    <div class="editor-container">
+        <nav class="tabs-documents"></nav>
+        <div id="monaco-editor-container"></div>
+        <!--<footer class="feedback"></footer>-->
+    </div>
+    <!--<aside class="sidebar-right"></aside>-->
 </main>
 <footer class="status-bar">
 </footer>

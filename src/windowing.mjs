@@ -1,8 +1,9 @@
-import {BrowserWindow, dialog, ipcMain as ipc} from "electron/main";
+import {BrowserWindow, dialog, ipcMain as ipc, nativeTheme as theme, session} from "electron/main";
 import path from "node:path";
 import {ResolvePath} from './scheme-app-dw2ide.mjs';
 import * as electron from 'electron';
 import ResourcesPath from './resources-path.mjs';
+import {asyncLocalStorage} from './background.mjs';
 
 function BrowserWindowUpdateHack(browser) {
     browser.setBackgroundColor('#00000000');
@@ -25,6 +26,7 @@ export async function CreateWindowAsync(url, width, height, preload) {
 
     /** @type BrowserWindowConstructorOptions */
     const options = {
+        show: true,
         width: width,
         height: height,
         title: "DW2IDE: " + url,
@@ -61,7 +63,7 @@ export async function CreateWindowAsync(url, width, height, preload) {
     }
 
     const browser = new BrowserWindow(options);
-    browser.webContents.openDevTools();
+    browser.webContents.openDevTools({activate: false});
 
     TransparentWindows.add(browser);
 
@@ -93,7 +95,8 @@ export async function CreateWindowAsync(url, width, height, preload) {
         return {action: 'deny'};
     });
 
-    browser.loadURL(url);
+    browser.loadURL(url)
+        .catch(error => console.error(error));
 
     return browser;
 }
@@ -125,6 +128,22 @@ let LastWindowCommand = new Date();
  * @return {void}
  */
 export function RegisterWindowingIpcHandlers() {
+
+    ipc.handle('change-native-theme', async (event, preferredTheme) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (!window) return;
+        switch (preferredTheme) {
+            // basically just a whitelist of valid themes
+            case 'system':
+            case 'light':
+            case 'dark':
+                theme.themeSource = preferredTheme;
+                asyncLocalStorage.setItem('preferred-theme', preferredTheme)
+                    .catch(error => console.error(error));
+                return true;
+        }
+        return false;
+    });
 
     ipc.handle('dev-tools', (event, arg) => {
         //const window = BrowserWindow.fromWebContents(event.sender);

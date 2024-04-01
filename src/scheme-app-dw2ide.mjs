@@ -14,6 +14,8 @@ export {AppDw2IdeClrProtocolHandler} from './scheme-app-dw2ide-clr.mjs';
 
 const PreloadCssHeader = //language=text
     "<app://dw2ide/preload.css>; rel=preload; as=style";
+const PreloadCssLinkHeader = //language=text
+    "<app://dw2ide/preload.css>; rel=stylesheet; media=all"
 
 function ContentTypeAppendCharset(mimeType) {
     switch (mimeType) {
@@ -46,6 +48,7 @@ function HandleHeadRequest(mimeType, stats, request) {
     });
     if (mimeType === 'text/html' || mimeType === 'application/xhtml+xml') {
         response.headers.append('Link', PreloadCssHeader);
+        //response.headers.append('Link', PreloadCssLinkHeader);
     }
     return response;
 }
@@ -71,6 +74,7 @@ async function HandleGetRequest(mimeType, stats, request, resolvedPath) {
             });
             if (mimeType === 'text/html' || mimeType === 'application/xhtml+xml') {
                 response.headers.append('Link', PreloadCssHeader);
+                //response.headers.append('Link', PreloadCssLinkHeader);
             }
             return response;
         }
@@ -141,7 +145,9 @@ async function HandleGetRequest(mimeType, stats, request, resolvedPath) {
         response.headers.append('Content-Range', `bytes ${rangeStart}-${rangeEnd}/${stats.size}`);
     }
     if (mimeType === 'text/html' || mimeType === 'application/xhtml+xml') {
-        response.headers.append('Link', PreloadCssHeader);
+        if (request.url !== 'app://dw2ide/background.html')
+            response.headers.append('Link', PreloadCssHeader);
+        //response.headers.append('Link', PreloadCssLinkHeader);
     }
     return response;
 }

@@ -23,9 +23,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('monaco-loaded', (e) => {
     window.log("monaco-loaded event");
+
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    prefersDark.addEventListener('change', ({matches}) =>
+        window.monaco.editor.setTheme(matches ? 'vs-dark' : 'vs'));
+
     /** @type {typeof import('monaco-editor').editor.IStandaloneCodeEditor } */
     window.monacoHost = monaco.editor.create(document.getElementById('monaco-editor-container'), {
-        theme: 'vs-dark',
+        theme: prefersDark.matches ? 'vs-dark' : 'vs',
         language: 'xml',
         automaticLayout: true,
         largeFileOptimizations: true,
@@ -142,6 +147,7 @@ async function PostMonacoSetup() {
     const btnMinimize = document.getElementById('action-minimize');
     const btnRestore = document.getElementById('action-restore');
     const btnMaximize = document.getElementById('action-maximize');
+    const btnSwitchTheme = document.getElementById('action-switch-theme');
 
     let currentFilePath = null;
 // new uses save dialog to create a new file
@@ -303,6 +309,10 @@ async function PostMonacoSetup() {
         // hide maximize, show restore
         btnMaximize.setAttribute('hidden', '');
         btnRestore.removeAttribute('hidden');
+    }, {passive: true});
+
+    btnSwitchTheme.addEventListener('click', async () => {
+        await window.rotateTheme();
     }, {passive: true});
 
     window.addEventListener('resize', async () => {

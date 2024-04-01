@@ -1,4 +1,4 @@
-import {app, BrowserWindow, session} from 'electron/main';
+import {app, BrowserWindow, session, nativeTheme} from 'electron/main';
 import extensionInstaller, {VUEJS_DEVTOOLS} from 'electron-devtools-assembler';
 import {AppDw2IdeClrProtocolHandler, AppDw2IdeProtocolHandler, InstallProtocolHandler} from './scheme-custom.mjs';
 import {CreateWindowAsync, RegisterWindowingIpcHandlers} from "./windowing.mjs";
@@ -6,6 +6,7 @@ import process from 'node:process';
 import {RegisterUnlockInternalsIpcHandler} from './unlock-internals.mjs';
 import {RegisterLoggingIpcHandler} from './logging-ipc.mjs';
 import {RegisterAppDw2IdeIpcHandler} from './scheme-app-dw2ide.mjs';
+import {asyncLocalStorage} from './background.mjs';
 
 if (!app.requestSingleInstanceLock()) {
     app.exit(0);
@@ -201,12 +202,12 @@ app.prependOnceListener('ready', async () => {
         const frame = details.frame;
         // system-level and devtools frames can bypass
         if (frame === undefined
-            ||frame.url === undefined
+            || frame.url === undefined
             || frame.url.startsWith("devtools://")) {
             callback(details);
             return;
         }
-            if (url.startsWith("devtools://")) {
+        if (url.startsWith("devtools://")) {
             if (details.referrer.startsWith("devtools://")) {
                 callback(details);
                 return;
@@ -227,7 +228,7 @@ app.prependOnceListener('ready', async () => {
         }
 
         const mimeTypes = details.responseHeaders['content-type'];
-        if (mimeTypes.some(type => type.startsWith('text/html') || type.startsWith('application/xhtml+xml'))) {
+        if (mimeTypes && mimeTypes.some(type => type.startsWith('text/html') || type.startsWith('application/xhtml+xml'))) {
             callback({
                 responseHeaders: {
                     ...details.responseHeaders,
@@ -285,3 +286,21 @@ app.prependOnceListener('ready', async () => {
                 .catch(console.error)
         , 10);
 });
+
+async function main() {
+    const thisStart = new Date().toISOString();
+    await asyncLocalStorage.setItem('last-start', thisStart);
+
+    const preferredTheme = await asyncLocalStorage.getItem('preferred-theme')
+    switch (preferredTheme) {
+        case 'system':
+        case 'dark':
+        case 'light':
+            nativeTheme.themeSource = preferredTheme;
+            console.log(`Set theme to ${preferredTheme}`);
+            break;
+    }
+}
+
+main()
+    .catch(console.error);

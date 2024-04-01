@@ -119,7 +119,7 @@ export function RegisterUnlockInternalsIpcHandler() {
                 dbg.detach();
                 ipcReplayBreakMap.delete(webContents);
                 if (reopenDevTools)
-                    webContents.openDevTools();
+                    webContents.openDevTools({activate: false});
                 console.log("unlock-internals done");
             }
 

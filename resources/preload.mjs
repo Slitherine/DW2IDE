@@ -1,5 +1,5 @@
-import './preload-logging.mjs'
-import './async-helpers.cjs'
+import './preload-logging.mjs';
+import './async-helpers.cjs';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import {clipboard, ipcRenderer as ipc, nativeImage, shell} from 'electron';
@@ -446,7 +446,7 @@ if (location.href === 'about:blank') {
                 if (e.key === 'F12') {
                     ipc.invoke('dev-tools', 'open')
                         .catch(e => window.error(e));
-                } else if (e.key == 'F5') {
+                } else if (e.key === 'F5') {
                     ipc.invoke('reload')
                         .catch(e => window.error(e));
                 } else if (e.key === 'Escape') {
@@ -528,8 +528,8 @@ if (location.href === 'about:blank') {
                 }
             });
             return electron.ipc.invoke('register-blob',
-                { buffer: new Uint8Array(buffer), type: blob.type });
-        }
+                {buffer: new Uint8Array(buffer), type: blob.type});
+        };
     }
 
     await main();
@@ -540,11 +540,15 @@ window.log("preload.mjs done");
 
 window.Dw2DomWorkerManager = Dw2DomWorkerManager;
 
-/*
-setTimeout(async () => {
-    // for testing
-    const dw2Dom = new Dw2Dom();
-    await dw2Dom.load();
-    console.log("dw2Dom loaded", dw2Dom);
-}, 500)*/
+window.setTheme = async (theme) => {
+    if (!await ipc.invoke('change-native-theme', theme))
+        throw new Error(`Unsupported native theme: ${theme}`);
+};
 
+window.rotateTheme = async () => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDark)
+        await window.setTheme('light');
+    else
+        await window.setTheme('dark');
+};

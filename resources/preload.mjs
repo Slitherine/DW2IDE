@@ -9,7 +9,6 @@ import './preload-dw2ide.mjs';
 import {Dw2Dom, Dw2DomWorkerManager} from './dw2-dom.mjs';
 import process from 'node:process';
 import * as preloadMonaco from './preload-monaco.mjs';
-import {LoadMonacoEditor} from './preload-monaco.mjs';
 
 if (location.href === 'about:blank') {
     // check if there is --kickoff-url=... in argv
@@ -536,8 +535,6 @@ if (location.href === 'about:blank') {
 
 }
 
-window.log("preload.mjs done");
-
 window.Dw2DomWorkerManager = Dw2DomWorkerManager;
 
 window.setTheme = async (theme) => {
@@ -552,3 +549,5 @@ window.rotateTheme = async () => {
     else
         await window.setTheme('dark');
 };
+
+window.log("preload.mjs done");

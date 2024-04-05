@@ -1417,6 +1417,7 @@ function parseTextContent(nodeValue, entityResolver, document) {
     if (document?.options.isHtml && entityResolver === undefined)
         entityResolver = getHtmlEntitiesResolver();
     // parse CDATA, entities, etc.
+    if (!nodeValue) return '';
     return nodeValue
         .replace(/<!\[CDATA\[(.*?)]]>/g, '$1')
         .replace(/&[^;]+;/g, m => {

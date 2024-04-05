@@ -1,3 +1,8 @@
+import {StorageProxy} from './storage-proxy.js';
+console.log('data-editor loading...');
+
+const storage = new StorageProxy(localStorage);
+
 /** @external dialog
  * @type {
  *     {
@@ -10,10 +15,41 @@
 
 dialog;
 
+const SavingRequiresValidXmlTitle = `The XML is not well-formed.`;
+const SavingRequiresValidXmlBody = `Please correct it before saving.`;
+
 async function delay(ms) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function (...args) {
+        const later = () => {
+            timeout = null;
+            if (!immediate)
+                func.apply(this, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow)
+            func.apply(this, args);
+    };
+}
+
+function throttle(func, wait) {
+    let timeout;
+    return function (...args) {
+        if (!timeout) {
+            timeout = setTimeout(() => {
+                timeout = null;
+                func.apply(this, args);
+            }, wait);
+        }
+    };
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -28,12 +64,21 @@ window.addEventListener('monaco-loaded', (e) => {
     prefersDark.addEventListener('change', ({matches}) =>
         window.monaco.editor.setTheme(matches ? 'vs-dark' : 'vs'));
 
-    /** @type {typeof import('monaco-editor').editor.IStandaloneCodeEditor } */
-    window.monacoHost = monaco.editor.create(document.getElementById('monaco-editor-container'), {
+    window.monacoEditor = monaco.editor.create(document.getElementById('monaco-editor-container'), {
         theme: prefersDark.matches ? 'vs-dark' : 'vs',
         language: 'xml',
         automaticLayout: true,
-        largeFileOptimizations: true,
+        largeFileOptimizations: false,
+        autoIndent: 'full',
+        autoSurround: 'languageDefined',
+        autoClosingBrackets: 'languageDefined',
+        autoClosingQuotes: 'languageDefined',
+        autoClosingOvertype: 'always',
+        autoClosingDelete: 'always',
+        trimAutoWhitespace: true,
+        formatOnType: true,
+        formatOnPaste: true,
+        formatOnSave: true,
         lightbulb: {
             enabled: true
         }
@@ -46,35 +91,11 @@ window.addEventListener('monaco-loaded', (e) => {
 const localStorageProxyDefaults = new Map([
     ['last-directory', path.join(dw2ide.GetUserChosenGameDirectory(), 'data')],
 ]);
-const storage = new Proxy(window.localStorage, {
-    get(target, prop) {
-        if (typeof (prop) !== 'string')
-            return undefined;
-        // convert camel case to kebab case
-        prop = prop.replace(/([a-z])([A-Z])/g, (m, p1, p2) => `${p1}-${p2.toLowerCase()}`);
-        const result = target.getItem(prop);
-        if (result !== null)
-            return result;
-        if (localStorageProxyDefaults.has(prop))
-            return localStorageProxyDefaults.get(prop);
-        return undefined;
-    },
-    set(target, prop, value) {
-        if (typeof (prop) !== 'string')
-            return false;
-        prop = prop.replace(/([a-z])([A-Z])/g, (m, p1, p2) => `${p1}-${p2.toLowerCase()}`);
-        target.setItem(prop, value);
-        return true;
-    },
-    deleteProperty(target, prop) {
-        if (typeof (prop) !== 'string')
-            return false;
-        target.removeItem(prop);
-        return true;
-    }
-});
+
 
 window.localStorageProxy = storage;
+
+let autoValidateXmlTimeout = undefined;
 
 async function PostMonacoSetup() {
     window.log("PostMonacoSetup");
@@ -162,14 +183,16 @@ async function PostMonacoSetup() {
             defaultPath: storage.lastDirectory
         });
         if (result.canceled) {
+            postStatusMessage('New file canceled.');
             return;
         }
 
-        window.log('New file:', result.filePath);
+        //window.log('New file:', result.filePath);
         fs.stat(result.filePath).then((stats) => {
             // if the file exists, report error
             if (stats !== null) {
                 dialog.showErrorBox('Error', 'The file already exists. Please choose a different name or Open it instead.');
+                postStatusMessage('New file canceled.');
                 return;
             }
             // touch the file
@@ -179,16 +202,22 @@ async function PostMonacoSetup() {
                     // ok, now we can clear the editor and change file path
                     currentFilePath = result.filePath;
                     storage.lastDirectory = path.dirname(currentFilePath);
-                    const model = window.monaco.editor.createModel('', 'xml', `file://${result.filePath}`);
-                    window.monacoHost.setModel(model);
-                    window.monacoHost.focus();
+                    monaco.editor.removeAllMarkers('XML Validation');
+                    const model = window.monaco.editor.createModel('', 'xml',
+                        monaco.Uri.parse(`file:///${result.filePath}`));
+                    monacoEditor.setModel(model);
+                    monacoEditor.focus();
+                    autoValidateXml(model);
+                    postStatusMessage('New file created.');
                 }).catch((err) => {
                 window.error('File create error:', err);
                 dialog.showErrorBox('Error', 'An error occurred while creating the file. Please try again.');
+                postStatusMessage('New file canceled.');
             });
         }).catch((err) => {
             window.error('File stats error:', err);
             dialog.showErrorBox('Error', 'An error occurred while checking the file. Please try again.');
+            postStatusMessage('New file canceled.');
         });
     }, {passive: true});
 
@@ -203,6 +232,7 @@ async function PostMonacoSetup() {
             defaultPath: storage.lastDirectory
         });
         if (result.canceled) {
+            postStatusMessage('Open canceled.');
             return;
         }
 
@@ -212,12 +242,18 @@ async function PostMonacoSetup() {
                 window.log('File read:', result.filePaths[0]);
                 currentFilePath = result.filePaths[0];
                 storage.lastDirectory = path.dirname(currentFilePath);
-                const model = window.monaco.editor.createModel(data, 'xml', `file://${result.filePaths[0]}`);
-                window.monacoHost.setModel(model);
-                window.monacoHost.focus();
+
+                monaco.editor.removeAllMarkers('XML Validation');
+                const model = window.monaco.editor.createModel(data, 'xml',
+                    monaco.Uri.parse(`file:///${result.filePaths[0]}`));
+                monacoEditor.setModel(model);
+                monacoEditor.focus();
+                autoValidateXml(model);
+                postStatusMessage('File opened.');
             }).catch((err) => {
             window.error('File read error:', err);
             dialog.showErrorBox('Error', 'An error occurred while reading the file. Please try again.');
+            postStatusMessage('Open failed.');
         });
     }, {passive: true});
 
@@ -228,13 +264,33 @@ async function PostMonacoSetup() {
             btnSaveAs.click();
             return;
         }
-        const data = window.monacoHost.getValue();
+
+        const model = monacoEditor.getModel();
+
+        autoValidateXmlNow(model);
+
+        while (model['xmlValid'] === undefined) {
+            postStatusMessage('Validating...');
+            await delay(125);
+        }
+
+        if (model['xmlValid'] === false) {
+            await dialog.showErrorBox(SavingRequiresValidXmlTitle, SavingRequiresValidXmlBody);
+            // run the 'Go to next problem' command (Alt+F8)
+            monacoEditor.trigger('editor.action.marker.next', 'editor.action.marker.next', {});
+            postStatusMessage('Save canceled.');
+            return;
+        }
+
+        const data = model.getValue();
         fs.writeFile(currentFilePath, data)
             .then(() => {
                 window.log('File saved:', currentFilePath);
+                postStatusMessage('File saved.');
             }).catch((err) => {
             window.error('File save error:', err);
             dialog.showErrorBox('Error', 'An error occurred while saving the file. Please try again.');
+            postStatusMessage('Save failed.');
         });
     }, {passive: true});
 
@@ -249,20 +305,42 @@ async function PostMonacoSetup() {
             ],
             defaultPath: storage.lastDirectory
         });
+
         if (result.canceled) {
+            postStatusMessage('Save canceled.');
+            return;
+        }
+
+        const model = monacoEditor.getModel();
+
+        autoValidateXmlNow(model);
+
+        while (model['xmlValid'] === undefined) {
+            postStatusMessage('Validating...');
+            await delay(125);
+        }
+
+        if (model['xmlValid'] === false) {
+            await dialog.showErrorBox(SavingRequiresValidXmlTitle, SavingRequiresValidXmlBody);
+            // run the 'Go to next problem' command (Alt+F8)
+            monacoEditor.trigger('editor.action.marker.next', 'editor.action.marker.next', {});
+            postStatusMessage('Save canceled.');
             return;
         }
 
         window.log('Save file:', result.filePath);
-        const data = window.monacoHost.getValue();
+        const data = model.getValue();
+
         fs.writeFile(result.filePath, data)
             .then(() => {
                 window.log('File saved:', result.filePath);
                 currentFilePath = result.filePath;
                 storage.lastDirectory = path.dirname(currentFilePath);
+                postStatusMessage('File saved.');
             }).catch((err) => {
             window.error('File save error:', err);
-            dialog.showErrorBox('Error', 'An error occurred while saving the file. Please try again.');
+            postStatusMessage('Save failed.');
+            return dialog.showErrorBox('Error', 'An error occurred while saving the file. Please try again.');
         });
     }, {passive: true});
 
@@ -330,7 +408,7 @@ async function PostMonacoSetup() {
         }, 50);
     }, {passive: true});
 
-    window.addEventListener('beforeunload', (e) => {
+    window.addEventListener('beforeunload', _ => {
         storage.windowX = window.screenX;
         storage.windowY = window.screenY;
         storage.windowWidth = window.outerWidth;
@@ -423,4 +501,207 @@ async function PostMonacoSetup() {
     window.dw2Dom = dw2Dom;
     monaco.languages.registerCompletionItemProvider('xml', dw2Dom);
     monaco.languages.registerHoverProvider('xml', dw2Dom);
+    autoValidateXml(monacoEditor.getModel());
+
+
+    function autoValidateXmlNow(model) {
+        model['xmlValid'] = undefined;
+        const hadActiveCallbackTimeout = typeof autoValidateXmlTimeout === 'number';
+        if (hadActiveCallbackTimeout)
+            clearTimeout(autoValidateXmlTimeout);
+        if (hadActiveCallbackTimeout || autoValidateXmlTimeout === undefined) {
+            autoValidateXmlTimeout = setTimeout(async () => {
+                autoValidateXmlTimeout = null; // uninterruptible at this stage
+                const model = monacoEditor.getModel();
+                const xml = model.getValue();
+                await validateXml(currentFilePath, xml, model);
+                autoValidateXmlTimeout = undefined;
+            }, 125);
+        }
+    }
+
+    /**
+     * @param model {monaco.editor.ITextModel}
+     */
+    function autoValidateXml(model) {
+        if (typeof autoValidateXmlTimeout === 'number')
+            clearTimeout(autoValidateXmlTimeout);
+
+        model.onDidChangeContent(_ => {
+            autoValidateXmlNow(model);
+        });
+    }
+
+    /**
+     * @param filePath {string}
+     * @param xml {string}
+     * @param model {monaco.editor.ITextModel}
+     * @return {Promise<boolean>}
+     */
+    async function validateXml(filePath, xml, model) {
+        const modelVersionId = model.getVersionId();
+        const results = await Dw2Dom.validateXml(xml, []);
+
+        if (modelVersionId !== model.getVersionId()) {
+            // model changed after validation, schedule a new validation
+
+            if (autoValidateXmlTimeout === null)
+                return false; // can't interrupt
+
+            if (autoValidateXmlTimeout !== undefined)
+                clearTimeout(autoValidateXmlTimeout);
+
+            autoValidateXmlTimeout = undefined;
+            autoValidateXmlNow(model);
+        }
+
+        if (results === true) {
+            monaco.editor.removeAllMarkers('XML Validation');
+            //monacoEditor.render(true);
+            model['xmlValid'] = true;
+            return true;
+        }
+
+        /** @type {monaco.editor.IMarkerData[]} */
+        const markers = [];
+        for (const err of results) {
+            if (!err) continue;
+            // estimate the range length by checking for succeeding characters
+            const startOffset = model.getOffsetAt({lineNumber: err.line, column: err.column});
+            let endOffset = startOffset + 1;
+            let endChar = xml[endOffset];
+            for (; ;) {
+                switch (endChar) {
+                    case undefined:
+                    case '>':
+                    case '<':
+                    case '/':
+                    case ' ':
+                        break;
+                    default:
+                        endOffset++;
+                        endChar = xml[endOffset];
+                        continue;
+                }
+                break;
+            }
+            const length = endOffset - startOffset;
+            const endPos = length <= 1
+                ? model.getPositionAt(endOffset + 1) // min 1 char
+                : model.getPositionAt(endOffset - 1);
+            let severity = monaco.MarkerSeverity.Error;
+            switch (err.level) {
+                case /** @see {import('node-libxml').XmlErrorLevel.XML_ERR_NONE} */
+                0:
+                    severity = monaco.MarkerSeverity.Hint;
+                    break;
+                case /** @see {import('node-libxml').XmlErrorLevel.XML_ERR_WARNING} */
+                1:
+                    severity = monaco.MarkerSeverity.Warning;
+                    break;
+            }
+            const message = err.message.trim();
+            const startLineNumber = err.line;
+            const startColumn = err.column;
+            const endLineNumber = endPos.lineNumber;
+            const endColumn = endPos.column;
+            /** @type {monaco.editor.IMarkerData} */
+            const marker = {
+                message,
+                severity,
+                startLineNumber,
+                startColumn,
+                endLineNumber,
+                endColumn,
+                modelVersionId,
+                source: model.getValueInRange({
+                    startLineNumber,
+                    startColumn,
+                    endLineNumber,
+                    endColumn
+                }),
+                resource: model.uri,
+                //code: `${'schema' in err ? 'XSD' : 'XML'}${err.level}`
+            };
+            if ('int1' in err) {
+                marker.relatedInformation = [{
+                    resource: model.uri,
+                    message: "Refer to here",
+                    startLineNumber: err.int1,
+                    startColumn: 1,
+                    endLineNumber,
+                    endColumn
+                }];
+                markers.push({
+                    message: `Referenced from ${err.int1}: ${message}`,
+                    severity: Math.max(monaco.MarkerSeverity.Hint, severity - 1),
+                    startLineNumber: err.int1,
+                    startColumn: 1,
+                    endLineNumber: err.int1,
+                    endColumn,
+                    modelVersionId,
+                    source: model.getValueInRange({
+                        startLineNumber: err.int1,
+                        startColumn: 1,
+                        endLineNumber: err.int1,
+                        endColumn
+                    }),
+                    resource: model.uri
+                });
+            }
+            markers.push(marker);
+            switch (severity) {
+                case monaco.MarkerSeverity.Hint:
+                    window.log(`[XML Validation] ${message} @ ${startLineNumber}:${startColumn}-${endLineNumber}:${endColumn}`);
+                    break;
+                case monaco.MarkerSeverity.Warning:
+                    window.warn(`[XML Validation] ${message} @ ${startLineNumber}:${startColumn}-${endLineNumber}:${endColumn}`);
+                    break;
+                case monaco.MarkerSeverity.Error:
+                    window.error(`[XML Validation] ${message} @ ${startLineNumber}:${startColumn}-${endLineNumber}:${endColumn}`);
+            }
+        }
+        //monaco.editor.removeAllMarkers('XML Validation');
+        monaco.editor.setModelMarkers(model, 'XML Validation', markers);
+        //monacoEditor.render(true);
+        window.warn(`[XML Validation] ${markers.length} markers applied.`);
+        model['xmlValid'] = false;
+        return false;
+    }
 }
+
+const statusBar = document.getElementById('status-bar');
+let statusQueue = [];
+
+function postStatusMessage(msg) {
+    if (statusQueue[statusQueue.length - 1] === msg)
+        return;
+    if (statusBar.lastElementChild && statusBar.lastElementChild.textContent === msg)
+        return;
+    statusQueue.push(msg);
+}
+
+function updateStatusBarFromQueue() {
+    if (statusBar.childElementCount >= 2) {
+        const first = statusBar.firstElementChild;
+        if (!(first === statusBar.lastElementChild
+            || first.getAnimations().some(a => a.playState !== 'finished'))) {
+            if (first.dataset.landed === undefined) {
+                first.dataset.landed = performance.now().toString();
+            } else if ((parseFloat(first.dataset.landed) + 800) < performance.now()) {
+                first.remove();
+            }
+        }
+    }
+    if (statusQueue.length === 0) return;
+    const msg = statusQueue.shift();
+    const textNode = document.createTextNode(msg);
+    const textSpan = document.createElement('span');
+    textSpan.appendChild(textNode);
+    textSpan.dataset.added = performance.now().toString();
+    statusBar.appendChild(textSpan);
+}
+
+setInterval(updateStatusBarFromQueue, 100);
+
+console.log('data-editor loaded');

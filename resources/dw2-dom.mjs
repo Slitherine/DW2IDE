@@ -1,16 +1,12 @@
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
-//import {Stopwatch} from './async-helpers.cjs';
-//import {DOMParser} from 'xmldom';
-import {addExtension as CborAddExtension, Encoder as CborEncoder} from 'cbor-x';
-import parseXml, * as ImmuDom from './dom/ImmuDom.mjs';
-import {DOMParser} from './dom/ImmuDom.mjs';
 
-const cbor = new CborEncoder({structuredClone: true});
+import parseXml, {DOMParser, RegisterWithCborX} from './dom/ImmuDom.mjs';
+import {addExtension as CborAddExtension, Encoder as CborEncoder} from 'cbor-x';
+
 
 // for debug
 window.parseXml = parseXml;
-window.cbor = cbor;
 
 require('./resources/async-helpers.cjs');
 
@@ -33,7 +29,7 @@ function WrapError(message, err) {
  */
 export class Dw2DomWorkerManager {
     static {
-        ImmuDom.RegisterWithCborX(CborAddExtension);
+        RegisterWithCborX(CborAddExtension);
     }
 
     static async #encode(data) {
@@ -1292,9 +1288,15 @@ export class Dw2Dom {
                 const nextPathCursor = schemaType;
                 if (nextPathCursor instanceof Dw2DomSchemaComplexType) {
                     schemaElem = nextPathCursor.elementMap.get(nextPathElement);
-                    context.schemaElemPath.push(schemaElem);
-                    schemaType = schemaElem.type;
-                    context.schemaTypePath.push(schemaType);
+                    if (schemaElem){
+                        context.schemaElemPath.push(schemaElem);
+                        schemaType = schemaElem.type;
+                        context.schemaTypePath.push(schemaType);
+                    } else {
+                        //console.warn("Can't find schema element for ", nextPathElement);
+                        context.incomplete = nextPathElement;
+                        break;
+                    }
                 } else {
                     // simple type, leaf
                     const limit = offset - node.startOffset;
@@ -1339,11 +1341,11 @@ export class Dw2Dom {
      */
     #resolveSchema(dom, uri) {
         if (typeof uri === 'string') {
-            uri = uri.startsWith('file://')
+            uri = uri.startsWith('file:///')
                 ? window.monaco.Uri.file(uri.substring(7))
                 : window.monaco.Uri.parse(uri, true);
         }
-        const fileNameStarts = uri.path.lastIndexOf('/') + 1;
+        const fileNameStarts = uri.path.lastIndexOf('\\') + 1;
         const fileName = uri.path.slice(fileNameStarts);
         if (fileName.endsWith('.xml')) {
             const fileNameWithoutExt = fileName.slice(0, -4);
@@ -1406,7 +1408,7 @@ export class Dw2Dom {
 
     static #classInherits(subjectClass, ancestorClass) {
         if (subjectClass === ancestorClass) return true;
-        if (subjectClass === null) return false;
+        if (subjectClass === null || subjectClass === undefined) return false;
         return subjectClass.prototype instanceof ancestorClass;
     }
 
@@ -1950,7 +1952,7 @@ export class Dw2Dom {
 
         /** @type {DW2IDERuntimeBindings} */
         let isoCtx;
-        if (bundleName === null) {
+        if (!bundleName) {
             isoCtx = this.#commonBundleIsoCtx;
         } else {
             let bundleInfo = this.#loadedBundles.get(bundleName);
@@ -2198,46 +2200,16 @@ export class Dw2Dom {
                         // I think these are all bundle paths
                         // check for parent node containing BundleName
                         const objPath = node.textContent.trim();
-                        let bundleName;
+                        let bundleName = null;
                         for (const otherNode of node.parentElement.childNodes) {
                             if (otherNode.nodeType === Node.ELEMENT_NODE && otherNode.tagName === "BundleName") {
                                 bundleName = otherNode.textContent.trim();
                                 break;
                             }
                         }
-                        if (!bundleName) {
-                            // TODO: have a default isoCtx that prompts the user for what bundles to load
-                            // the preview will report the bundle name can't be resolved
-                            const startPos = model.getPositionAt(node.startOffset);
-                            const endPos = model.getPositionAt(node.endOffset);
-                            return {
-                                range: window.monaco.Range.fromPositions(startPos, endPos),
-                                contents: [
-                                    {
-                                        value: "Can't resolve bundle name.",
-                                        isTrusted: true
-                                    }
-                                ]
-                            };
-                        }
-                        let bundlePath;
+                        let bundlePath = null;
                         if (bundleName) {
                             bundlePath = await this.#resolveBundlePath(bundleName);
-                        }
-                        if (!bundlePath) {
-                            // the preview will report the bundle name can't be resolved
-                            const startPos = model.getPositionAt(node.startOffset);
-                            const endPos = model.getPositionAt(node.endOffset);
-                            return {
-                                range: window.monaco.Range.fromPositions(startPos, endPos),
-                                contents: [
-                                    {
-                                        // TODO: add clickable link to retry resolving the bundle name
-                                        value: `Can't resolve path for bundle ${bundleName}.`,
-                                        isTrusted: true
-                                    }
-                                ]
-                            };
                         }
 
                         let preview = this.#imagePreviewCache.get(`${bundleName}:${objPath}`);
@@ -2257,11 +2229,6 @@ export class Dw2Dom {
                                 ]
                             };
                         } else {
-
-                            let preview = this.#imagePreviewCache.get(`${objPath}`);
-                            if (preview === undefined)
-                                preview = this.#createImagePreview(null, objPath);
-
                             const startPos = model.getPositionAt(node.startOffset);
                             const endPos = model.getPositionAt(node.endOffset);
                             return {
@@ -2331,6 +2298,14 @@ export class Dw2Dom {
         }
         if (result.toString() === '[object Object]') debugger;
         console.log(`parseXml (${goAsync ? 'async' : 'sync'}) took ${elapsed}ms for ${xml.length} chars; threshold ${thresholdAtStart} -> ${Dw2Dom.#asyncParseXmlThresholdLength}`);
+        return result;
+    }
+
+    /** @type {Promise<(import('node-libxml').XmlError|{schema?:string})[]>} */
+    static async validateXml(xml, schemas) {
+        const sw = new Stopwatch();
+        const result = await Dw2DomWorkerManager.worker.validateXml(xml, schemas);
+        console.log(`validateXml (async) took ${(sw.elapsed)}ms`);
         return result;
     }
 
@@ -2425,3 +2400,8 @@ export function createDw2XmlElementProxy(element) {
         }
     });
 }
+
+const cbor = new CborEncoder({structuredClone: true});
+window.cbor = cbor;
+
+console.log('Dw2Dom loaded');
